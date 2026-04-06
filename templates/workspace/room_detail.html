@@ -4,18 +4,16 @@
 {% block extra_css %}
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <style>
-    /* Matrix overrides for Quill Editor */
     .ql-toolbar.ql-snow {
         background: #010801;
         border-color: var(--panel-border-bright) !important;
         border-top-left-radius: 2px;
         border-top-right-radius: 2px;
-        text-align: center; /* Center the toolbar to match the page */
+        text-align: center; 
     }
     
-    /* THE GOOGLE DOCS PAGE VIEW */
     .editor-scroll-container {
-        background: #000; /* Dark background behind the page */
+        background: #000; 
         padding: 40px 20px;
         border: 1px solid var(--panel-border-bright);
         border-top: none;
@@ -26,19 +24,17 @@
         border: none !important;
         font-family: 'Share Tech Mono', monospace;
         font-size: 0.95rem;
-        background: #010801; /* The "Page" color */
+        background: #010801; 
         
-        /* Fixed width like a piece of paper */
         width: 816px; 
         max-width: 100%;
         min-height: 1056px; 
         margin: 0 auto;
         
-        box-shadow: 0 0 15px rgba(0, 255, 65, 0.15); /* Matrix green glow instead of drop shadow */
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.15); 
         border: 1px solid rgba(0, 255, 65, 0.3) !important;
     }
 
-    /* Fullscreen Toggle Class */
     .matrix-fullscreen {
         position: fixed !important;
         top: 0; left: 0;
@@ -258,16 +254,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 
 <script>
-    // --- FULLSCREEN LOGIC ---
     function toggleFullscreen(elementId) {
         const el = document.getElementById(elementId);
         el.classList.toggle('matrix-fullscreen');
         
-        // If we fullscreen the whiteboard, we need to recalculate the canvas size
         if (elementId === 'wb-panel' && fCanvas) {
             setTimeout(resizeCanvas, 100); 
         }
-        // If we fullscreen the doc, expand the scroll container
         if (elementId === 'doc-panel') {
             const container = document.getElementById('editor-container');
             if (el.classList.contains('matrix-fullscreen')) {
@@ -278,11 +271,9 @@
         }
     }
 
-    // --- CONFIG ---
     const ROOM_SLUG = "{{ room.slug }}";
     const CURRENT_USER = "{{ request.user.username }}";
 
-    // --- WEBSOCKET SETUP ---
     const wsUrl = `ws://${window.location.host}/ws/room/${ROOM_SLUG}/`;
     let socket = null;
     let typingTimer = null;
@@ -305,7 +296,6 @@
         };
     }
 
-    // --- CHAT & PRESENCE (Minified for brevity) ---
     function appendChatMessage(u, c, t) {
         $('#empty-chat-msg').remove();
         const color = u === CURRENT_USER ? 'var(--warning)' : 'var(--matrix-green)';
@@ -320,12 +310,10 @@
     function setOnline(u, o) { const d = document.getElementById(`dot-${u}`); if(d) d.style.opacity = o ? '1' : '0.2'; }
 
 
-    // --- QUILL RICH TEXT EDITOR ---
     const saveStatus = document.getElementById('save-status');
     let saveStatusTimer = null;
     let documentUpdateTimer = null; 
 
-    // Register the stable resize module
     Quill.register('modules/blotFormatter', QuillBlotFormatter.default);
 
     const quill = new Quill('#quill-editor', {
@@ -340,7 +328,7 @@
                 ['image'],
                 ['clean']
             ],
-            blotFormatter: {} // This enables clicking and dragging to resize images!
+            blotFormatter: {} 
         }
     });
 

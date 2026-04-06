@@ -7,20 +7,12 @@ from django.utils.text import slugify
 from django.contrib.auth.models import User
 from .models import Room, RoomMembership, Message, Document, ActivityLog
 
-
-# ─────────────────────────────────────────
-# LANDING
-# ─────────────────────────────────────────
-
 def landing_view(request):
     if request.user.is_authenticated:
         return redirect('room_list')
     return render(request, 'workspace/landing.html')
 
 
-# ─────────────────────────────────────────
-# AUTH
-# ─────────────────────────────────────────
 
 def register_view(request):
     if request.user.is_authenticated:
@@ -59,16 +51,11 @@ def logout_view(request):
     return redirect('login')
 
 
-# ─────────────────────────────────────────
-# ROOMS
-# ─────────────────────────────────────────
 
 @login_required
 def room_list(request):
-    # All public rooms
     all_rooms = Room.objects.filter(is_private=False).order_by('-created_at')
 
-    # Rooms the current user is a member of
     my_room_ids = RoomMembership.objects.filter(
         user=request.user, is_active=True
     ).values_list('room_id', flat=True)
@@ -91,7 +78,6 @@ def create_room(request):
             messages.error(request, 'Room name cannot be empty.')
             return redirect('create_room')
 
-        # Auto-generate unique slug
         base_slug = slugify(name)
         slug = base_slug
         counter = 1
@@ -99,12 +85,10 @@ def create_room(request):
             slug = f'{base_slug}-{counter}'
             counter += 1
 
-        # Check duplicate name
         if Room.objects.filter(name=name).exists():
             messages.error(request, 'A room with that name already exists.')
             return redirect('create_room')
 
-        # Create room
         room = Room.objects.create(
             name=name,
             slug=slug,
@@ -113,17 +97,14 @@ def create_room(request):
             is_private=is_private
         )
 
-        # Create the document for this room automatically
         Document.objects.create(room=room)
 
-        # Make creator the owner
         RoomMembership.objects.create(
             user=request.user,
             room=room,
             role='owner'
         )
 
-        # Log it
         ActivityLog.objects.create(
             room=room,
             user=request.user,
@@ -141,7 +122,6 @@ def create_room(request):
 def join_room(request, slug):
     room = get_object_or_404(Room, slug=slug)
 
-    # Check if already a member
     membership = RoomMembership.objects.filter(
         user=request.user, room=room
     ).first()
@@ -150,7 +130,6 @@ def join_room(request, slug):
         if membership.is_active:
             messages.info(request, f'You are already a member of "{room.name}".')
         else:
-            # Re-activate if they had left before
             membership.is_active = True
             membership.save()
             messages.success(request, f'Welcome back to "{room.name}"!')
@@ -201,7 +180,6 @@ def leave_room(request, slug):
 def room_detail(request, slug):
     room = get_object_or_404(Room, slug=slug)
 
-    # Check membership
     membership = RoomMembership.objects.filter(
         user=request.user, room=room, is_active=True
     ).first()
@@ -209,20 +187,16 @@ def room_detail(request, slug):
     is_member = membership is not None
     is_owner = membership.role == 'owner' if membership else False
 
-    # Get active members
     members = RoomMembership.objects.filter(
         room=room, is_active=True
     ).select_related('user')
 
-    # Get last 50 messages
     chat_messages = Message.objects.filter(
         room=room
     ).select_related('user').order_by('timestamp')[:50]
 
-    # Get document
     document = getattr(room, 'document', None)
 
-    # Get activity log
     activity = ActivityLog.objects.filter(room=room).order_by('-timestamp')[:10]
 
     return render(request, 'workspace/room_detail.html', {
