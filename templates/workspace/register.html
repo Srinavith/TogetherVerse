@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}Register — TogetherVerse{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="matrix-panel p-4">
+
+      <div class="section-label mb-0">new_user_registration</div>
+      <h3 class="mt-1 mb-0">CREATE IDENTITY</h3>
+      <div class="glow-line"></div>
+
+      <form method="POST">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label class="form-label">// USERNAME</label>
+          <input type="text" name="username" class="form-control"
+                 placeholder="choose_handle" value="{{ form.username.value|default:'' }}" required/>
+          {% if form.username.errors %}
+            <div style="color:var(--danger);font-size:0.78rem;margin-top:4px;font-family:'Share Tech Mono',monospace;">
+              ✗ {{ form.username.errors.0 }}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">// EMAIL</label>
+          <input type="email" name="email" class="form-control"
+                 placeholder="node@grid.net" value="{{ form.email.value|default:'' }}"/>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">// ACCESS_KEY</label>
+          <input type="password" name="password1" class="form-control"
+                 placeholder="••••••••" required/>
+          {% if form.password1.errors %}
+            <div style="color:var(--danger);font-size:0.78rem;margin-top:4px;font-family:'Share Tech Mono',monospace;">
+              ✗ {{ form.password1.errors.0 }}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label">// CONFIRM_ACCESS_KEY</label>
+          <input type="password" name="password2" class="form-control"
+                 placeholder="••••••••" required/>
+          {% if form.password2.errors %}
+            <div style="color:var(--danger);font-size:0.78rem;margin-top:4px;font-family:'Share Tech Mono',monospace;">
+              ✗ {{ form.password2.errors.0 }}
+            </div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-matrix-solid w-100">
+          INITIALIZE IDENTITY &nbsp;<i class="bi bi-arrow-right"></i>
+        </button>
+      </form>
+
+      <p style="text-align:center;margin-top:1.2rem;
+                font-family:'Share Tech Mono',monospace;
+                font-size:0.78rem;color:var(--text-muted);">
+        Already exist in the system?
+        <a href="{% url 'login' %}" style="color:var(--matrix-green);">LOGIN</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,496 @@
+{% extends 'base.html' %}
+{% block title %}{{ room.name }} - TogetherVerse{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<style>
+    /* Matrix overrides for Quill Editor */
+    .ql-toolbar.ql-snow {
+        background: #010801;
+        border-color: var(--panel-border-bright) !important;
+        border-top-left-radius: 2px;
+        border-top-right-radius: 2px;
+        text-align: center; /* Center the toolbar to match the page */
+    }
+    
+    /* THE GOOGLE DOCS PAGE VIEW */
+    .editor-scroll-container {
+        background: #000; /* Dark background behind the page */
+        padding: 40px 20px;
+        border: 1px solid var(--panel-border-bright);
+        border-top: none;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    .ql-container.ql-snow {
+        border: none !important;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.95rem;
+        background: #010801; /* The "Page" color */
+        
+        /* Fixed width like a piece of paper */
+        width: 816px; 
+        max-width: 100%;
+        min-height: 1056px; 
+        margin: 0 auto;
+        
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.15); /* Matrix green glow instead of drop shadow */
+        border: 1px solid rgba(0, 255, 65, 0.3) !important;
+    }
+
+    /* Fullscreen Toggle Class */
+    .matrix-fullscreen {
+        position: fixed !important;
+        top: 0; left: 0;
+        width: 100vw !important; height: 100vh !important;
+        z-index: 9999;
+        background: #010801;
+        margin: 0 !important;
+        border: none !important;
+        border-radius: 0;
+        overflow-y: auto;
+    }
+
+    .ql-snow .ql-stroke { stroke: var(--matrix-green) !important; }
+    .ql-snow .ql-fill, .ql-snow .ql-stroke.ql-fill { fill: var(--matrix-green) !important; }
+    .ql-snow .ql-picker { color: var(--matrix-green) !important; }
+    .ql-snow .ql-picker-options { background: #010801 !important; border-color: var(--matrix-green) !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+    <div>
+        <div class="section-label mb-0">node_workspace</div>
+        <h2 class="mt-1 mb-0">{{ room.name|upper }}</h2>
+        <p style="font-family: 'Share Tech Mono', monospace; font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+            // {{ room.description|default:"no description provided" }}
+        </p>
+    </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+        {% if is_member %}
+            {% if not is_owner %}
+                <a href="{% url 'leave_room' room.slug %}" class="btn btn-matrix-danger btn-sm" onclick="return confirm('DISCONNECT from this node?')">
+                    <i class="bi bi-power"></i> LEAVE
+                </a>
+            {% else %}
+                <span class="badge-matrix"><i class="bi bi-shield"></i> OWNER</span>
+            {% endif %}
+        {% else %}
+            <a href="{% url 'join_room' room.slug %}" class="btn btn-matrix-solid btn-sm">
+                <i class="bi bi-plug"></i> &nbsp; CONNECT
+            </a>
+        {% endif %}
+        <a href="{% url 'room_list' %}" class="btn btn-matrix btn-sm">
+            <i class="bi bi-arrow-left"></i> BACK
+        </a>
+    </div>
+</div>
+
+<div class="glow-line"></div>
+
+{% if not is_member %}
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle"></i> &nbsp;// ACCESS_RESTRICTED - connect to this node to use the editor and chat
+    </div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        
+        <div id="doc-panel" class="matrix-panel p-3 mb-4">
+            <div class="d-flex justify-content-between align-items-end mb-2">
+                <div class="section-label mb-0">rich_text_document</div>
+                <div class="d-flex gap-3 align-items-center">
+                    <div id="save-status" style="font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; color: var(--matrix-green); opacity: 0; transition: opacity 0.3s;">
+                        <i class="bi bi-cloud-arrow-up"></i> SYNCING...
+                    </div>
+                    {% if is_member %}
+                    <button class="btn btn-matrix btn-sm py-1" onclick="toggleFullscreen('doc-panel')">
+                        <i class="bi bi-arrows-fullscreen"></i> EXPAND
+                    </button>
+                    <button id="export-pdf-btn" class="btn btn-matrix btn-sm py-1">
+                        <i class="bi bi-filetype-pdf"></i> EXPORT PDF
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if is_member %}
+                <div class="editor-scroll-container" id="editor-container">
+                    <div id="quill-editor">
+                        {{ document.content|safe }}
+                    </div>
+                </div>
+            {% else %}
+                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.82rem; color: var(--text-muted);">// connect to node to access document</p>
+            {% endif %}
+        </div>
+
+        <div id="wb-panel" class="matrix-panel p-3 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                <div class="section-label mb-0">shared_whiteboard</div>
+                {% if is_member %}
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <button class="btn btn-matrix btn-sm py-1" onclick="toggleFullscreen('wb-panel')">
+                        <i class="bi bi-arrows-fullscreen"></i>
+                    </button>
+                    <div style="width: 1px; height: 20px; background: var(--panel-border-bright);"></div>
+                    <button id="wb-draw" class="btn btn-matrix-solid btn-sm py-1"><i class="bi bi-pen"></i> DRAW</button>
+                    <button id="wb-select" class="btn btn-matrix btn-sm py-1"><i class="bi bi-cursor"></i> MOVE</button>
+                    <button id="wb-text" class="btn btn-matrix btn-sm py-1"><i class="bi bi-fonts"></i> TEXT</button>
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-matrix btn-sm py-1 dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            SHAPES
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark" style="background: #010801; border-color: var(--matrix-green); font-family: 'Share Tech Mono', monospace;">
+                            <li><a class="dropdown-item" href="#" onclick="addShape('rect')">Rectangle</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="addShape('circle')">Circle</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="addArrow(false)">Arrow (One-Way)</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="addArrow(true)">Arrow (Two-Way)</a></li>
+                        </ul>
+                    </div>
+                    
+                    <input type="file" id="wb-image-upload" style="display:none;" accept="image/*">
+                    <button class="btn btn-matrix btn-sm py-1" onclick="document.getElementById('wb-image-upload').click();"><i class="bi bi-image"></i> IMAGE</button>
+                    
+                    <button id="clear-board-btn" class="btn btn-matrix-danger btn-sm py-1"><i class="bi bi-eraser"></i> CLEAR</button>
+                </div>
+                {% endif %}
+            </div>
+            {% if is_member %}
+                <div class="mb-2 d-flex align-items-center gap-2" style="font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; color: var(--matrix-green);">
+                    <label>Pen Thickness:</label>
+                    <input type="range" id="wb-thickness" min="1" max="20" value="2" class="form-range" style="width: 100px;">
+                </div>
+                <div id="canvas-wrapper" style="width: 100%; border: 1px solid var(--panel-border-bright); background: #010801; overflow: hidden; border-radius: 2px;">
+                    <canvas id="whiteboard"></canvas>
+                </div>
+            {% else %}
+                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.82rem; color: var(--text-muted);">// connect to node to access whiteboard</p>
+            {% endif %}
+        </div>
+
+        <div class="matrix-panel p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="section-label mb-0">live_comms_channel</div>
+                <div id="typing-indicator" style="font-family: 'Share Tech Mono', monospace; font-size:0.72rem; color:var(--matrix-green); min-height:16px; opacity:0; transition:opacity 0.3s;"></div>
+            </div>
+
+            {% if is_member %}
+                <div id="chat-box" style="height:250px; overflow-y:auto; background: #010801; border:1px solid var(--panel-border); border-radius: 2px; padding: 12px; margin-bottom:12px;">
+                    {% for msg in chat_messages %}
+                        <div class="chat-msg mb-2">
+                            {% if msg.is_system_message %}
+                                <div style="font-family: 'Share Tech Mono', monospace; font-size:0.75rem; color:var(--text-muted); text-align:center; padding: 4px 0;">// {{ msg.content }}</div>
+                            {% else %}
+                                <span style="color:var(--matrix-green); font-family: 'Share Tech Mono', monospace; font-weight: 600;">{{ msg.user.username }}</span>
+                                <span style="color:var(--text-muted); font-family: 'Share Tech Mono', monospace; font-size:0.72rem; margin-left:8px;">{{ msg.timestamp|time:"H:i" }}</span>
+                                <div style="color:var(--text-body); font-family: 'Share Tech Mono', monospace; font-size:0.85rem; margin-top:2px;">&gt; {{ msg.content }}</div>
+                            {% endif %}
+                        </div>
+                    {% empty %}
+                        <p id="empty-chat-msg" style="font-family: 'Share Tech Mono', monospace; font-size:0.82rem; color:var(--text-muted);">// channel empty - initiate transmission</p>
+                    {% endfor %}
+                </div>
+
+                <div class="input-group">
+                    <span class="input-group-text" style="background: #010801; border-color:var(--panel-border-bright); color:var(--matrix-green); font-family: 'Share Tech Mono', monospace;">&gt;_</span>
+                    <input type="text" id="chat-input" class="form-control" placeholder="transmit message..." autocomplete="off" maxlength="500" />
+                    <button id="chat-send" class="btn btn-matrix"><i class="bi bi-send"></i> SEND</button>
+                </div>
+            {% else %}
+                <p style="font-family: 'Share Tech Mono', monospace; font-size:0.82rem; color:var(--text-muted);">// connect to node to access comms channel</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="matrix-panel p-3 mb-4">
+            <div class="section-label mb-2">connected_nodes</div>
+            <div id="members-list">
+                {% for m in members %}
+                    <div class="d-flex align-items-center mb-3 gap-2 member-item" data-username="{{ m.user.username }}">
+                        <div class="member-avatar">{{ m.user.username|first|upper }}</div>
+                        <div style="flex-grow:1;">
+                            <div style="font-family: 'Share Tech Mono', monospace; font-size:0.85rem; color:var(--text-body);">
+                                {{ m.user.username }}
+                                {% if m.user == request.user %}
+                                    <span style="color:var(--text-muted); font-size:0.72rem;">[you]</span>
+                                {% endif %}
+                            </div>
+                            <div style="font-size:0.72rem; color:var(--text-muted); font-family: 'Share Tech Mono', monospace;">{{ m.role|upper }}</div>
+                        </div>
+                        <span class="online-dot" style="opacity:0.3;" id="dot-{{ m.user.username }}"></span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="matrix-panel p-3">
+            <div class="section-label mb-2">activity_log</div>
+            <div id="activity-log">
+                {% for log in activity %}
+                    <div class="mb-3 activity-item">
+                        <div style="font-family: 'Share Tech Mono', monospace; font-size:0.8rem; color:var(--text-secondary);">
+                            <i class="bi bi-chevron-right" style="color:var(--matrix-green);"></i> {{ log.detail }}
+                        </div>
+                        <div style="font-size:0.72rem; color:var(--text-muted); padding-left:14px; font-family: 'Share Tech Mono', monospace;">{{ log.timestamp|date:"M d, H:i" }}</div>
+                    </div>
+                {% empty %}
+                    <p style="font-family: 'Share Tech Mono', monospace; font-size:0.78rem; color:var(--text-muted);">// no activity recorded</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if is_member %}
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/quill-blot-formatter@1.0.5/dist/quill-blot-formatter.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+
+<script>
+    // --- FULLSCREEN LOGIC ---
+    function toggleFullscreen(elementId) {
+        const el = document.getElementById(elementId);
+        el.classList.toggle('matrix-fullscreen');
+        
+        // If we fullscreen the whiteboard, we need to recalculate the canvas size
+        if (elementId === 'wb-panel' && fCanvas) {
+            setTimeout(resizeCanvas, 100); 
+        }
+        // If we fullscreen the doc, expand the scroll container
+        if (elementId === 'doc-panel') {
+            const container = document.getElementById('editor-container');
+            if (el.classList.contains('matrix-fullscreen')) {
+                container.style.maxHeight = 'calc(100vh - 100px)';
+            } else {
+                container.style.maxHeight = '600px';
+            }
+        }
+    }
+
+    // --- CONFIG ---
+    const ROOM_SLUG = "{{ room.slug }}";
+    const CURRENT_USER = "{{ request.user.username }}";
+
+    // --- WEBSOCKET SETUP ---
+    const wsUrl = `ws://${window.location.host}/ws/room/${ROOM_SLUG}/`;
+    let socket = null;
+    let typingTimer = null;
+    let isTyping = false;
+
+    function connectWebSocket() {
+        socket = new WebSocket(wsUrl);
+        socket.onopen = function () { setOnline(CURRENT_USER, true); };
+        socket.onclose = function () { setOnline(CURRENT_USER, false); setTimeout(connectWebSocket, 3000); };
+        socket.onmessage = function (e) {
+            const data = JSON.parse(e.data);
+            switch (data.type) {
+                case 'chat_message': appendChatMessage(data.username, data.content, data.timestamp); break;
+                case 'typing': showTyping(data.username, data.is_typing); break;
+                case 'user_join': setOnline(data.username, true); break;
+                case 'user_leave': setOnline(data.username, false); break;
+                case 'document_update': updateDocument(data.content, data.username); break;
+                case 'whiteboard_draw': handleRemoteWhiteboardUpdate(data.draw_data); break;
+            }
+        };
+    }
+
+    // --- CHAT & PRESENCE (Minified for brevity) ---
+    function appendChatMessage(u, c, t) {
+        $('#empty-chat-msg').remove();
+        const color = u === CURRENT_USER ? 'var(--warning)' : 'var(--matrix-green)';
+        $('#chat-box').append(`<div class="chat-msg mb-2"><span style="color:${color}; font-family: 'Share Tech Mono', monospace; font-weight:600;">${escHtml(u)}</span><span style="color:var(--text-muted); font-size:0.72rem; margin-left:8px;">${t}</span><div style="color:var(--text-body); font-family: 'Share Tech Mono', monospace; font-size:0.85rem; margin-top:2px;">&gt; ${escHtml(c)}</div></div>`);
+        const box = document.getElementById('chat-box'); if(box) box.scrollTop = box.scrollHeight;
+    }
+    $('#chat-send').on('click', function() { const v = $('#chat-input').val().trim(); if (!v || !socket || socket.readyState !== WebSocket.OPEN) return; socket.send(JSON.stringify({ type: 'chat_message', content: v })); $('#chat-input').val(''); stopTyping(); });
+    $('#chat-input').on('keydown', function(e) { if(e.key==='Enter'){ e.preventDefault(); $('#chat-send').click(); }});
+    $('#chat-input').on('input', function() { if(!isTyping) { isTyping=true; if(socket && socket.readyState===1) socket.send(JSON.stringify({type:'typing', is_typing:true}));} clearTimeout(typingTimer); typingTimer=setTimeout(stopTyping, 2000); });
+    function stopTyping() { if(isTyping) { isTyping=false; if(socket && socket.readyState===1) socket.send(JSON.stringify({type:'typing', is_typing:false})); }}
+    function showTyping(u, t) { const e = document.getElementById('typing-indicator'); if(!e) return; if(t) { e.textContent=`${u} is transmitting...`; e.style.opacity='1'; } else { e.style.opacity='0'; setTimeout(()=>{e.textContent='';},300); }}
+    function setOnline(u, o) { const d = document.getElementById(`dot-${u}`); if(d) d.style.opacity = o ? '1' : '0.2'; }
+
+
+    // --- QUILL RICH TEXT EDITOR ---
+    const saveStatus = document.getElementById('save-status');
+    let saveStatusTimer = null;
+    let documentUpdateTimer = null; 
+
+    // Register the stable resize module
+    Quill.register('modules/blotFormatter', QuillBlotFormatter.default);
+
+    const quill = new Quill('#quill-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'size': ['small', false, 'large', 'huge'] }],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'align': [] }], // Added alignment tools!
+                ['image'],
+                ['clean']
+            ],
+            blotFormatter: {} // This enables clicking and dragging to resize images!
+        }
+    });
+
+    function triggerSaveStatus() {
+        if (!saveStatus) return;
+        saveStatus.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> SYNCING...';
+        saveStatus.style.color = 'var(--warning)'; saveStatus.style.opacity = '1';
+        clearTimeout(saveStatusTimer);
+        saveStatusTimer = setTimeout(() => {
+            saveStatus.innerHTML = '<i class="bi bi-cloud-check"></i> SYNCED';
+            saveStatus.style.color = 'var(--matrix-green)'; setTimeout(() => { saveStatus.style.opacity = '0'; }, 2000);
+        }, 800);
+    }
+
+    quill.on('text-change', function(delta, oldDelta, source) {
+        if (source === 'user') { 
+            triggerSaveStatus();
+            clearTimeout(documentUpdateTimer);
+            documentUpdateTimer = setTimeout(() => {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ type: 'document_update', content: quill.root.innerHTML }));
+                }
+            }, 400); 
+        }
+    });
+
+    function updateDocument(content, username) {
+        if (quill.root.innerHTML !== content) {
+            const currentSelection = quill.getSelection(); 
+            quill.clipboard.dangerouslyPasteHTML(content); 
+            if (currentSelection) { setTimeout(() => quill.setSelection(currentSelection), 0); } 
+            
+            $('.ql-container').css({borderColor: 'var(--matrix-green)', boxShadow: '0 0 15px rgba(0, 255, 65, 0.4)'});
+            setTimeout(() => { $('.ql-container').css({borderColor: 'rgba(0, 255, 65, 0.3)', boxShadow: '0 0 15px rgba(0, 255, 65, 0.15)'}); }, 300);
+        }
+    }
+
+    document.getElementById('export-pdf-btn').addEventListener('click', () => {
+        const element = document.createElement('div');
+        element.innerHTML = quill.root.innerHTML;
+        element.style.color = 'black'; element.style.fontFamily = 'Arial, sans-serif'; element.style.padding = '20px';
+        const opt = { margin: 1, filename: `${ROOM_SLUG}_document.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
+        html2pdf().set(opt).from(element).save();
+    });
+
+
+    // --- COLLABORATIVE WHITEBOARD (FABRIC.JS) ---
+    const wrapper = document.getElementById('canvas-wrapper');
+    const canvasEl = document.getElementById('whiteboard');
+    let fCanvas;
+
+    function resizeCanvas() {
+        const panel = document.getElementById('wb-panel');
+        // If fullscreen, make it take most of the screen. If not, fixed 500px height.
+        const height = panel.classList.contains('matrix-fullscreen') ? window.innerHeight - 150 : 500;
+        
+        if (!fCanvas) {
+            canvasEl.width = wrapper.clientWidth;
+            canvasEl.height = height;
+            fCanvas = new fabric.Canvas('whiteboard', { isDrawingMode: true });
+            fCanvas.freeDrawingBrush.color = '#00ff41';
+            fCanvas.freeDrawingBrush.width = 2;
+        } else {
+            fCanvas.setWidth(wrapper.clientWidth);
+            fCanvas.setHeight(height);
+            fCanvas.renderAll();
+        }
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas(); // Initial load
+
+    // Toolbar Controls
+    $('#wb-draw').click(() => { fCanvas.isDrawingMode = true; $('#wb-draw').removeClass('btn-matrix').addClass('btn-matrix-solid'); $('#wb-select').removeClass('btn-matrix-solid').addClass('btn-matrix'); });
+    $('#wb-select').click(() => { fCanvas.isDrawingMode = false; $('#wb-select').removeClass('btn-matrix').addClass('btn-matrix-solid'); $('#wb-draw').removeClass('btn-matrix-solid').addClass('btn-matrix'); });
+    $('#wb-thickness').on('input', function() { fCanvas.freeDrawingBrush.width = parseInt(this.value, 10); });
+
+    // Text Boxes
+    $('#wb-text').click(() => {
+        const text = new fabric.IText('Type here...', { left: 50, top: 50, fontFamily: 'Share Tech Mono', fill: '#00ff41', fontSize: 24, borderColor: '#00ff41', cornerColor: '#00ff41' });
+        fCanvas.add(text); fCanvas.setActiveObject(text); fCanvas.isDrawingMode = false; syncWhiteboard();
+    });
+
+    // SHAPES & ARROWS
+    window.addShape = function(type) {
+        let shape;
+        if (type === 'rect') shape = new fabric.Rect({ left: 100, top: 100, width: 100, height: 100, fill: 'transparent', stroke: '#00ff41', strokeWidth: 3, borderColor: '#00ff41', cornerColor: '#00ff41'});
+        if (type === 'circle') shape = new fabric.Circle({ left: 100, top: 100, radius: 50, fill: 'transparent', stroke: '#00ff41', strokeWidth: 3, borderColor: '#00ff41', cornerColor: '#00ff41'});
+        fCanvas.add(shape); fCanvas.setActiveObject(shape); fCanvas.isDrawingMode = false; syncWhiteboard();
+    }
+
+    window.addArrow = function(doubleSided) {
+        let pathStr = doubleSided ? 
+            "M 15 10 L 85 10 M 15 5 L 0 10 L 15 15 M 85 5 L 100 10 L 85 15" : 
+            "M 0 10 L 85 10 M 85 5 L 100 10 L 85 15";
+        
+        let path = new fabric.Path(pathStr, {
+            left: 100, top: 100, fill: '', stroke: '#00ff41', strokeWidth: 3,
+            borderColor: '#00ff41', cornerColor: '#00ff41', scaleX: 2, scaleY: 2
+        });
+        fCanvas.add(path); fCanvas.setActiveObject(path); fCanvas.isDrawingMode = false; syncWhiteboard();
+    }
+
+    // Images
+    $('#wb-image-upload').on('change', function(e) {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(f) {
+            fabric.Image.fromURL(f.target.result, function(img) {
+                img.scaleToWidth(250); img.set({ borderColor: '#00ff41', cornerColor: '#00ff41' });
+                fCanvas.add(img); fCanvas.setActiveObject(img); syncWhiteboard();
+            });
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Clear Board
+    $('#clear-board-btn').click(() => { if(confirm("Erase entire whiteboard for everyone?")) { fCanvas.clear(); syncWhiteboard(); }});
+
+    // Syncing Logic
+    let boardUpdateTimer = null;
+    let isSyncing = false; 
+
+    function syncWhiteboard() {
+        if (isSyncing) return; 
+        clearTimeout(boardUpdateTimer);
+        boardUpdateTimer = setTimeout(() => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'whiteboard_draw', draw_data: JSON.stringify(fCanvas.toJSON()) }));
+            }
+        }, 400); 
+    }
+
+    fCanvas.on('path:created', syncWhiteboard);
+    fCanvas.on('object:modified', syncWhiteboard);
+    fCanvas.on('object:added', syncWhiteboard);
+    fCanvas.on('object:removed', syncWhiteboard);
+
+    function handleRemoteWhiteboardUpdate(draw_data) {
+        isSyncing = true; 
+        fCanvas.loadFromJSON(draw_data, function() {
+            fCanvas.renderAll();
+            isSyncing = false; 
+        });
+    }
+
+    // --- UTILS ---
+    function escHtml(str) { return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+    // --- INIT ---
+    $(document).ready(function () { connectWebSocket(); });
+</script>
+{% endif %}
+{% endblock %}

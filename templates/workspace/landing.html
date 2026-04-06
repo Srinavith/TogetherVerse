@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}TogetherVerse — Enter the Grid{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+
+  <!-- Glitch Title -->
+  <div style="font-family:'Share Tech Mono',monospace;
+              font-size:0.85rem;color:var(--text-muted);
+              letter-spacing:6px;margin-bottom:1rem;">
+    SYSTEM_INITIALIZING...
+  </div>
+
+  <h1 style="font-family:'Share Tech Mono',monospace;
+             font-size:3.5rem;
+             color:var(--matrix-green);
+             text-shadow:0 0 30px var(--matrix-green),
+                         0 0 60px rgba(0,255,65,0.3);
+             letter-spacing:6px;
+             margin-bottom:0.5rem;">
+    TOGETHER<span style="opacity:0.4">_</span>VERSE
+  </h1>
+
+  <div class="glow-line mx-auto" style="max-width:400px;"></div>
+
+  <p style="font-family:'Share Tech Mono',monospace;
+            font-size:1rem;
+            color:var(--text-secondary);
+            max-width:500px;margin:0 auto 0.5rem;
+            line-height:1.8;">
+    A real-time collaborative workspace.<br/>
+    <span class="typing-cursor">Write. Chat. Build. Together</span>
+  </p>
+
+  <p style="font-family:'Share Tech Mono',monospace;
+            font-size:0.78rem;color:var(--text-muted);
+            margin-bottom:2.5rem;">
+    // WebSocket-powered &nbsp;·&nbsp; Multi-user &nbsp;·&nbsp; Persistent sessions
+  </p>
+
+  <div class="d-flex justify-content-center gap-3 flex-wrap">
+    <a href="{% url 'register' %}" class="btn btn-matrix-solid">
+      <i class="bi bi-rocket-takeoff"></i> &nbsp;JACK IN
+    </a>
+    <a href="{% url 'login' %}" class="btn btn-matrix">
+      <i class="bi bi-terminal"></i> &nbsp;LOGIN
+    </a>
+  </div>
+
+  <!-- Stats row -->
+  <div class="d-flex justify-content-center gap-5 mt-5"
+       style="font-family:'Share Tech Mono',monospace;font-size:0.78rem;">
+    <div>
+      <div style="color:var(--matrix-green);font-size:1.4rem;">01</div>
+      <div style="color:var(--text-muted);">REAL-TIME EDITOR</div>
+    </div>
+    <div>
+      <div style="color:var(--matrix-green);font-size:1.4rem;">02</div>
+      <div style="color:var(--text-muted);">LIVE CHAT</div>
+    </div>
+    <div>
+      <div style="color:var(--matrix-green);font-size:1.4rem;">03</div>
+      <div style="color:var(--text-muted);">PRESENCE TRACKING</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

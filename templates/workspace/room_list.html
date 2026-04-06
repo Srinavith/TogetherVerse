@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Rooms — TogetherVerse{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-1">
+  <div>
+    <div class="section-label mb-0">workspace_nodes</div>
+    <h2 class="mt-1 mb-0">ACTIVE ROOMS</h2>
+  </div>
+  <a href="{% url 'create_room' %}" class="btn btn-matrix-solid">
+    <i class="bi bi-plus"></i> &nbsp;NEW NODE
+  </a>
+</div>
+<div class="glow-line"></div>
+
+{% if my_rooms %}
+<p class="section-label">your_nodes</p>
+<div class="row g-3 mb-4">
+  {% for room in my_rooms %}
+  <div class="col-md-4">
+    <div class="matrix-panel p-3 h-100 d-flex flex-column">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <h5 class="mb-0" style="font-size:1rem;">{{ room.name|upper }}</h5>
+        {% if room.is_private %}
+          <span class="badge-dim">PRIVATE</span>
+        {% else %}
+          <span class="badge-matrix">PUBLIC</span>
+        {% endif %}
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-muted);
+                font-family:'Share Tech Mono',monospace;flex-grow:1;">
+        {{ room.description|default:"// no description" }}
+      </p>
+      <div style="font-family:'Share Tech Mono',monospace;
+                  font-size:0.75rem;color:var(--text-muted);margin-bottom:12px;">
+        <i class="bi bi-people"></i> {{ room.get_member_count }} nodes
+        &nbsp;·&nbsp;
+        <i class="bi bi-clock"></i> {{ room.created_at|date:"M d" }}
+      </div>
+      <a href="{% url 'room_detail' room.slug %}" class="btn btn-matrix-solid btn-sm">
+        ENTER &nbsp;<i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<p class="section-label">all_public_nodes</p>
+{% if all_rooms %}
+<div class="row g-3">
+  {% for room in all_rooms %}
+  <div class="col-md-4">
+    <div class="matrix-panel p-3 h-100 d-flex flex-column">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <h5 class="mb-0" style="font-size:1rem;">{{ room.name|upper }}</h5>
+        <span class="badge-matrix">PUBLIC</span>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-muted);
+                font-family:'Share Tech Mono',monospace;flex-grow:1;">
+        {{ room.description|default:"// no description" }}
+      </p>
+      <div style="font-family:'Share Tech Mono',monospace;
+                  font-size:0.75rem;color:var(--text-muted);margin-bottom:12px;">
+        <i class="bi bi-person"></i> {{ room.created_by.username }}
+        &nbsp;·&nbsp;
+        <i class="bi bi-people"></i> {{ room.get_member_count }} nodes
+      </div>
+      <a href="{% url 'room_detail' room.slug %}" class="btn btn-matrix btn-sm">
+        VIEW &nbsp;<i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="matrix-panel p-5 text-center">
+  <div style="font-family:'Share Tech Mono',monospace;color:var(--text-muted);font-size:0.85rem;">
+    <div style="font-size:2rem;margin-bottom:1rem;">[ NULL ]</div>
+    // no nodes found in the grid<br/>
+    <a href="{% url 'create_room' %}" class="btn btn-matrix-solid mt-3">
+      INITIALIZE FIRST NODE
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
